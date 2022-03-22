@@ -1,0 +1,10 @@
+.active {
+    box-shadow: 1px 1px 0px white;
+    /* border-left: 1px solid lightgrey !important; */
+    /* border-right: 1px solid lightgrey !important; */
+    border-left: 10px solid #325d88 !important;
+}
+
+.nav-link {
+    color: black;
+}
