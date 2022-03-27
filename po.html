@@ -1,0 +1,489 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+
+    <link rel="stylesheet" href="./assets/style.css">
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.3/Chart.js" integrity="sha512-QEiC894KVkN9Tsoi6+mKf8HaCLJvyA6QIRzY5KrfINXYuP9NxdIkRQhGq3BZi0J4I7V5SidGM3XUQ5wFiMDuWg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-annotation/0.5.7/chartjs-plugin-annotation.min.js" integrity="sha512-9hzM/Gfa9KP1hSBlq3/zyNF/dfbcjAYwUTBWYX+xi8fzfAPHL3ILwS1ci0CTVeuXTGkRAWgRMZZwtSNV7P+nfw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-colorschemes"></script>
+    
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/5.7.0/d3.min.js"></script>
+    
+    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.12.9/dist/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+
+    <!-- Latest compiled and minified CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.14/dist/css/bootstrap-select.min.css">
+
+    <!-- Latest compiled and minified JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.14/dist/js/bootstrap-select.min.js"></script>
+
+    <!-- Vue link -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
+
+    <!-- SockietIO -->
+    <script src="https://cdn.socket.io/4.4.1/socket.io.min.js" integrity="sha384-fKnu0iswBIqkjxrhQCTZ7qlLHOFEgNkRmK2vaO/LbTZSXdJfAu6ewRBdwHPhBo/H" crossorigin="anonymous"></script>
+
+</head>
+<body>
+
+    <div id="app" v-cloak>
+        <div class = "container">
+            <div class = "row py-4">
+                <div class = "col-2">
+                    <img height= "60px" width= "auto" src = "./assets/assure_logo.jpg">
+                </div>
+                <div class = "col-10">
+                    Search for a fund: <select v-model="stockSelected" data-width="90%" id="stock-selection" class="selectpicker mt-1" data-live-search="true"data-max-options="1"></select>
+                </div>
+            </div>
+            <div id="tabs-btn" class = "row">
+                <div class = "col-2 border-right">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a id="ta-tab" class="nav-link active tablinks"      v-on:click = "ta('ta', $event)">Technical Analysis</a>
+                        </li>
+                        <li class="nav-item">
+                            <a id="po-tab" class="nav-link tablinks" aria-current="page" v-on:click = "po('po', $event)">Portfolio Optimization</a>
+                        </li>
+                        <li class="nav-item">
+                            <a id="prediction-tab" class="nav-link tablinks" v-on:click = "prediction('prediction', $event)">Prediction</a>
+                        </li>
+                    </ul>
+                </div>
+                <div class = "col-9">
+                    <div>  
+                        <b>Selected fund: <span id="selected-stocks">{{stockSelected}}</span></b>
+                    </div>
+
+                    <!-- div for TA -->
+                    <div id="ta" class="tabcontent my-3 align-items-center" style = "display:none">
+                        </div>
+                    <!-- div for PO -->
+                    <div id="po" class="tabcontent">
+                        <div id="graphs">
+                            <div>
+                                <span class="pr-3">Time Range: 1 Year </span>
+                                <!-- <select v-model="timeRange" class="selectpicker" data-width="fit"> -->
+                                    <!-- <option value=1>1M</option>
+                                    <option value=3>3M</option>
+                                    <option value=6>6M</option> -->
+                                    <!-- <option value=12>1Y</option> -->
+                                    <!-- <option value=60>5Y</option> -->
+                                <!-- </select> -->
+                                
+                            </div>
+                            <div class="my-3 align-items-center">
+                                <span class="pr-2">Select your preferred Risk Level: </span>
+                                
+                                <div class="form-check form-check-inline">
+                                    <input type="radio" id="low" v-model="risk" value="Low" >
+                                    <label for="low">Low</label><br>    
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input type="radio" id="med" v-model="risk" value="Medium" >
+                                    <label for="med">Medium</label><br>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input type="radio" id="high" v-model="risk" value="High" >
+                                    <label for="high">High</label><br>
+                                </div>
+                            </div> 
+                        <div class="d-flex justify-content-between"> 
+                            <span class="pt-2">
+                                <span class="pr-3">Cick to Generate Charts: </span>
+                                <button id="generate" v-on:click="setTickersData()" class="btn generate-btn">Generate Charts</button>
+                            </span>
+                        </div>
+                    </div>
+                    <div id="description" style = "margin-top: 50px;">
+                        
+                    </div>
+                    <div width="200px" >
+                     <!--   <div class="row">
+                            <div class="column"><canvas id="myChart" class="p-3" ></canvas></div>
+                            <div class="column"><canvas id="myChart1" class="p-3"></canvas></div>    
+                        </div>
+                    -->
+                    <canvas id="myChart" class="p-3" ></canvas>
+                    <canvas id="myChart1" class="p-3" ></canvas>
+                        
+
+                    </div>
+                </div> 
+                
+                    
+
+                    <!-- div for prediction -->
+                    <div id="prediction" class="tabcontent" style="display: none">
+
+                    </div>
+                </div>  
+            </div>
+            <div class = "row">
+                <div class = "col-2"></div>
+                <div class = "col-9"></div>
+            </div>
+        </div>
+        
+
+    </div>
+
+</body>
+</html>
+
+<script type="module">
+    import { URL_po, set_ticker_data, get_return_series, get_ema, get_volatility, get_macd, get_bollinger, get_po, set_ticker_data_po} from "./callAPI/endpoint.js";
+    
+    // for loading of stocks for dropdown
+
+    d3.csv('./assets/nasdaq_etfs.csv')
+    .then(addStock);
+
+    function addStock(funds){
+        for (let i = 0; i < funds.length; i++) {
+            if(i == 0){ 
+                let select = document.getElementById('stock-selection');
+                let option = document.createElement('option');
+                option.setAttribute('value', funds[i]['Name & Symbol']);
+                option.setAttribute('selected', funds[i]['Name & Symbol']);
+                option.appendChild(document.createTextNode(funds[i]['Name & Symbol']));
+                select.appendChild(option);
+            } else{
+                let select = document.getElementById('stock-selection');
+                let option = document.createElement('option');
+                option.setAttribute('value', funds[i]['Name & Symbol']);
+                option.appendChild(document.createTextNode(funds[i]['Name & Symbol']));
+                select.appendChild(option);
+            }
+        }
+    }
+
+    // const socket = io.connect('http://127.0.0.1:5100');
+    // for updating selected stocks 
+
+    var app = new Vue({ 
+            el: '#app',
+            data(){
+                return {
+                stockSelected: ["TSLA - ETF", "SPY - TV", "AMZN - AMZZ", "GOOGL - google" ],
+                selectedTA: "returns",
+                timeRange: 12,
+                risk: ""
+            }
+            this.$set(this.risk)
+            },
+            methods:{
+            
+                getTime: function(e){
+                    let buttonValue = e.target.value;
+                    this.timeRange = buttonValue;
+                },
+
+                setTickersData: function(){
+
+                    const data = {
+                        "data": this.stockSelected, 
+                        "time_period": this.timeRange,
+                        "risk": this.risk
+                    };
+
+                    set_ticker_data_po(URL_po, data).then(result =>{
+                            this.portfolioOptimisation();
+                         
+                    })
+
+                },
+
+                portfolioOptimisation: function(){
+                    get_po(URL).then(result =>{
+                        const data = result;
+                        console.log(data)
+                        var funds = data.ticker;
+                        var allocation = data.allocation;
+                        var close_price = data.close_price;
+                        var max_sharpe_ratio = data.max_sharpe_ratio;
+                        var min_vol_ratio = data.min_vol_ratio;
+                        var combi = data.combi;
+                        var rar = data.rar;
+                        var dates = data.dates;
+                        var list_rt_vol = data.list_rt_vol;
+                        var ef_list = data.ef_list;
+                        var rar_evaluation = data.rar_evaluation
+                        var funds_dict = []
+                        for (let i = 0; i < funds.length; i++) {
+                            funds_dict.push({"fund" : funds[i], "x": list_rt_vol[i]['x'], "y": list_rt_vol[i]['y']})
+                            //funds_dict[funds[i]] = [list_rt_vol[i]['x'], list_rt_vol[i]['y']]
+                        }
+                        console.log(funds_dict)
+                        //console.log(funds)
+                        //console.log(allocation)
+                        document.getElementById("description").innerText = "Based on your risk level selection, please refer to the chart generated below for the optimised weightage for the funds you selected. The RAR of this combination is at " + rar + " and is in a " + rar_evaluation + " range."
+
+                        this.displayChart(funds, combi);            
+                        this.displayChart2(list_rt_vol,ef_list,funds_dict, funds, max_sharpe_ratio, min_vol_ratio);          
+     
+                    })
+                    
+                },
+                
+                displayChart: function(funds,combi){
+                    const data = {
+                        labels:funds,
+                        datasets: [
+                            {
+                                label: "Funds Composition",
+                                data: combi,
+                                backgroundColor: [
+                                    'rgb(255,26,104)',
+                                    'rgb(54,162,235)',
+                                    'rgb(255,206,86)',
+                                    'rgb(75,192,192)'
+                                ]
+                                
+                            }
+                        ],
+                        pointRadius:100
+                    }
+
+                    var myChart = new Chart("myChart", {
+                        
+                        type: "pie",
+                        data: data,
+                        options: {
+                            plugins:{
+                                colorschemes:{
+                                    scheme:  'brewer.YlGnBu'
+                                }   
+                            }
+                        }
+                    });
+                },
+                
+                displayChart2: function(list_rt_vol,ef_list,funds_dict, funds, max_sharpe_ratio, min_vol_ratio){
+                    const data = {
+                        datasets: [
+                            {
+                                label: "Efficient Frontier",
+                                data: ef_list,
+                                pointBackgroundColor: 'YlGnBu',
+                                
+                            },
+                            {
+                                label: "FUNDS",
+                                data:funds_dict,
+                                backgroundColor: [
+                                    'rgba(255,26,104,1)',
+                                    'rgba(54,162,235,1)',
+                                    'rgba(255,206,86,1)',
+                                    'rgba(75,192,192,1)'
+                                ],
+
+
+                            },
+                            {
+                                label: "MAXSHARPE",
+                                data: max_sharpe_ratio,
+                                pointBackgroundColor: 'rgb(255,0,0)',
+                                pointStyle: 'rect',
+                                pointRadius: 25
+                            },
+                            {
+                                label: "MINVOL",
+                                data: min_vol_ratio,
+                                pointBackgroundColor: 'rgb(255,0,255)',
+                                pointStyle: 'triangle',
+                                pointRadius: 25
+                            },
+                        ],
+
+                    }
+
+                    const scatterDataLabels = {
+                        id: 'scatterDataLabels',
+                        afterDatasetUpdate(chart,args,options){
+                            const { ctx } = chart;
+                            
+                            ctx.save();
+                            ctx.font = '12px sans-serif';
+                            
+                            ctx.fillText(chart.config.data.datasets[1].data[0].fund,100,100);
+                            console.log(chart.getDatasetMeta(0).data[0].x);
+                            
+                            //console.log(chart.config.data)
+                            //console.log(chart.config.data.datasets[1].data[0])
+
+                        }
+                    }
+                    
+                    var myChart = new Chart("myChart1", {
+                        
+                        type: "scatter",
+                        data: data,
+                        options: {
+                                //colorschemes:{
+                                 //   scheme:  'brewer.YlGnBu'
+                                //}   
+                            
+                        },
+                        plugins: [scatterDataLabels]
+                    })
+                     
+            },    
+            
+            displayChart3: function(list_rt_vol,ef_list,funds_dict, funds){
+                    const data = {
+                        datasets: [
+                            {
+                                label: "Efficient Frontier",
+                                data: ef_list,
+                                backgroundColor: 'YlGnBu',
+                                
+                            },
+                            {
+                                label: funds,
+                                data:list_rt_vol,
+                                backgroundColor: [
+                                    'rgba(255,26,104,1)',
+                                    'rgba(54,162,235,1)',
+                                    'rgba(255,206,86,1)',
+                                    'rgba(75,192,192,1)'
+                                ]
+
+                            }
+                        ],
+                        pointRadius:10000
+                    }
+
+                    var myChart = new Chart("myChart1", {
+                        
+                        type: "scatter",
+                        data: data,
+                        options: {
+                            plugins: {
+                                autocolors: false,
+                                annotation: {
+                                annotations: {
+                                    label1: {
+                                    type: 'label',
+                                    xValue: 2.5,
+                                    yValue: 60,
+                                    backgroundColor: 'rgba(245,245,245)',
+                                    content: ['This is my text', 'This is my text, second line'],
+                                    font: {
+                                        size: 18
+                                    }
+                                    }
+                                }
+                                }
+                            }
+                                //colorschemes:{
+                                 //   scheme:  'brewer.YlGnBu'
+                                //}   
+                            
+                        },
+                        plugins: ['chartjs-plugin-annotation']
+                    })
+            },    
+                    
+                       
+
+                
+
+            
+
+                   
+
+                // ta: function (feature,evt) {
+                //     let taTab = document.getElementById("ta-tab");
+                //     taTab.className = "nav-link active";
+
+                //     let poTab = document.getElementById("po-tab");
+                //     poTab.className = "nav-link";
+
+                //     let predictionTab = document.getElementById("prediction-tab");
+                //     predictionTab.className = "nav-link";
+
+                //     var i, tabcontent, tablinks;
+                //     tabcontent = document.getElementsByClassName("tabcontent");
+                //     for (i = 0; i < tabcontent.length; i++) {
+                //         tabcontent[i].style.display = "none";
+                //     }
+                //     tablinks = document.getElementsByClassName("tablinks");
+                //     for (i = 0; i < tablinks.length; i++) {
+                //         tablinks[i].className = tablinks[i].className.replace("active", "");
+                //     }
+                //     document.getElementById(feature).style.display = "block";
+                //     evt.currentTarget.className += " active";
+                    
+                //     // for chart generation
+                // },
+
+               po: function(feature,evt){
+                let taTab = document.getElementById("ta-tab");
+                taTab.className = "nav-link";
+
+                let poTab = document.getElementById("po-tab");
+                poTab.className = "nav-link active";
+
+                let predictionTab = document.getElementById("prediction-tab");
+                predictionTab.className = "nav-link";
+
+                var i, tabcontent, tablinks;
+                tabcontent = document.getElementsByClassName("tabcontent");
+                for (i = 0; i < tabcontent.length; i++) {
+                    tabcontent[i].style.display = "none";
+                }
+                tablinks = document.getElementsByClassName("tablinks");
+                for (i = 0; i < tablinks.length; i++) {
+                    tablinks[i].className = tablinks[i].className.replace("active", "");
+                }
+                document.getElementById(feature).style.display = "block";
+                evt.currentTarget.className += " active";
+            },
+
+            // prediction: function(feature,evt){
+            //     let taTab = document.getElementById("ta-tab");
+            //     taTab.className = "nav-link";
+
+            //     let poTab = document.getElementById("po-tab");
+            //     poTab.className = "nav-link";
+
+            //     let predictionTab = document.getElementById("prediction-tab");
+            //     predictionTab.className = "nav-link active";
+
+            //     var i, tabcontent, tablinks;
+            //     tabcontent = document.getElementsByClassName("tabcontent");
+            //     for (i = 0; i < tabcontent.length; i++) {
+            //         tabcontent[i].style.display = "none";
+            //     }
+            //     tablinks = document.getElementsByClassName("tablinks");
+            //     for (i = 0; i < tablinks.length; i++) {
+            //         tablinks[i].className = tablinks[i].className.replace("active", "");
+            //     }
+            //     document.getElementById(feature).style.display = "block";
+            //     evt.currentTarget.className += " active";
+            // }
+        },
+    })
+
+
+</script>
+
+
+
+
