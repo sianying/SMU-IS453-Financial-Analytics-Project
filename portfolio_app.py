@@ -31,7 +31,7 @@ def send_ticker_data():
     print(data)
     # #assigning ticker and time period, 12 refers to 12 months for time_period
     ticker = data['data']
-    time_period = data['time_period']
+    time_period = 24
     risk_level = data['risk']
     user_tickers = [ticker.split(" ")[0] for ticker in ticker]
     # #start and end dates
@@ -41,9 +41,9 @@ def send_ticker_data():
 
     # #calling yfinance api to reassigning the global df
     df = yf.download(user_tickers, start=start_date, end=end_date)
+
     print(type(ticker))
     user_ticker = user_tickers
-
 
     return_data = {
         "code": 200
@@ -56,7 +56,7 @@ def get_po():
     return_df = df.copy()
     #dates = list(return_df.index.strftime("%Y-%m-%d"))
     data = "123"
-    
+
     #print(user_ticker)
     #print(type(user_ticker))
     #print(return_df)
@@ -235,9 +235,6 @@ def get_po():
         }
         return data
 
-
-
-    
 
 
 if __name__ == '__main__':

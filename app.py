@@ -28,8 +28,9 @@ def send_ticker_data():
     data = request.get_json()
 
     # #assigning ticker and time period, 12 refers to 12 months for time_period
-    ticker = data['data'].split(" ")[0]
-    time_period = data['time_period']
+    if len(data['data']) == 1:
+        ticker = data['data'][0].split(" ")[0]
+        time_period = data['time_period']
 
     # #start and end dates
     now = dt.date.today()
@@ -177,19 +178,30 @@ def getVolatilityValues():
 
     dates = list(return_df.index.strftime("%Y-%m-%d"))
 
-    return_df['volatility'] = np.sqrt(252) * pd.DataFrame.rolling(np.log(return_df['Close'] / return_df['Close'].shift(1)),window=20).std()
+    return_df['volatility_50'] = np.sqrt(252) * pd.DataFrame.rolling(np.log(return_df['Close'] / return_df['Close'].shift(1)),window=50).std()
+    return_df['volatility_100'] = np.sqrt(252) * pd.DataFrame.rolling(np.log(return_df['Close'] / return_df['Close'].shift(1)),window=100).std()
 
     #Since JSON is unable to take in NaN/missing values, replace all missing values with python's None
-    volatility = list(return_df['volatility'].replace([np.nan], [None])) 
+    volatility_50 = list(return_df['volatility_50'].replace([np.nan], [None])) 
+    volatility_100 = list(return_df['volatility_100'].replace([np.nan], [None])) 
 
     return_data = {
         "labels": dates,
         "datasets":[
             {
-                "label": "20 Day Volatility",
+                "label": "50 Day Volatility",
                 "type": 'line',
-                "data": volatility,
+                "data": volatility_50,
                 "borderColor": 'rgb(0, 0, 255)',
+                "fill": False,
+                "borderWidth": 0.5,
+                "pointRadius": 1
+            },
+            {
+                "label": "100 Day Volatility",
+                "type": 'line',
+                "data": volatility_100,
+                "borderColor": 'rgb(246, 190, 0)',
                 "fill": False,
                 "borderWidth": 0.5,
                 "pointRadius": 1

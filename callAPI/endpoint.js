@@ -113,7 +113,7 @@ export async function get_bollinger(URL) {
 }
 
 
-export async function get_po(URL) {
+export async function get_po(URL_po) {
     try {
         
         const response = await fetch(`${URL_po}/get_po`)
