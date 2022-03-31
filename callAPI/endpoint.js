@@ -44,6 +44,23 @@ export async function get_return_series(URL) {
     }
 }
 
+export async function get_price(URL) {
+    try {
+        
+        const response = await fetch(`${URL}/get_price`)
+        if (response) {
+            const result = await response.json()
+            return result;
+        }
+    } catch(e) {
+        const error = {
+            "code": 404,
+            "data": e
+        }
+        return error;
+    }
+}
+
 export async function get_ema(URL) {
     try {
         

@@ -72,6 +72,28 @@ def get_return_series():
 
     return return_series_data
 
+@app.route("/get_price", methods=['GET'])
+def get_price():
+    return_df = df.copy()
+    dates = list(return_df.index.strftime("%Y-%m-%d"))
+
+    data = return_df['Close'].to_list()
+
+    return_series_data = {
+        "labels": dates,
+        "datasets":[{
+            "label": "Close Price",
+            "type": 'line',
+            "data": data,
+            "borderColor": 'rgb(0, 100, 100)',
+            "fill": False,
+            "borderWidth": 0.5,
+            "pointRadius": 1
+        }]
+    }
+
+    return return_series_data
+
 @app.route("/get_ema", methods = ['GET'])
 def getEMAValues():
     return_df = df.copy()
@@ -332,7 +354,7 @@ def getBollinger():
     return_df = pd.concat([return_df, bollinger], axis=1)
 
     for i in range(len(return_df)):
-        if return_df['Close'][i] < return_df['BBL_20_2.0'][i]:
+        if return_df['Close'][i] <= return_df['BBL_20_2.0'][i]:
             if signal_point == False :
                 buy_signal.append(return_df['Close'][i])
                 sell_signal.append(np.nan)
@@ -340,7 +362,7 @@ def getBollinger():
             else:
                 buy_signal.append(np.nan)
                 sell_signal.append(np.nan)
-        elif return_df['Close'][i] > return_df['BBU_20_2.0'][i]:
+        elif return_df['Close'][i] >= return_df['BBU_20_2.0'][i]:
             if signal_point == True:
                 buy_signal.append(np.nan)
                 sell_signal.append(return_df['Close'][i])

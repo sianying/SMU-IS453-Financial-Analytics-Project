@@ -44,7 +44,10 @@
                     <img height= "60px" width= "auto" src = "./assets/assure_logo.jpg">
                 </div>
                 <div class = "col-10">
-                    Search for a fund: <select v-model="stockSelected" data-width="90%" id="stock-selection" class="selectpicker mt-1 stockSearch" data-live-search="true" data-max-options="4" multiple></select>
+                    <span v-if="taTab">Search for a fund (select only 1 fund): </span> 
+                    <span v-if="poTab">Search for a fund (select between 2 to 4 funds): </span> 
+                    <span v-if="predictionTab">Search for a fund (select only one fund): </span> 
+                    <select v-model="stockSelected" data-width="90%" id="stock-selection" class="selectpicker mt-1 stockSearch" data-live-search="true" data-max-options="4" multiple></select>
                 </div>
                 <!-- <div v-if="poTabSelected" class = "col-10">
                     Search for a fund: <select v-model="stockSelectedPO" data-width="90%" id="stock-selectionpo" class="selectpicker mt-1" data-live-search="true"data-max-options="3" multiple></select>
@@ -75,6 +78,7 @@
                                 <div class="dropdown my-2">
                                     <span class="pr-3">Select a Technical Analysis Tool: </span>
                                     <select v-model="selectedTA" class="selectpicker" data-width="fit">
+                                        <option value="price">Close Price</option>
                                         <option value="returns">Return Series</option>
                                         <option value="ema">Exponential Moving Averages</option>
                                         <option value="volatility">Volatility</option>
@@ -103,6 +107,7 @@
 
                         <div width="200px" class="mt-3">
                             <canvas v-if="selectedTA == 'returns'" id="returnsGraph" style="width: 300px"></canvas>
+                            <canvas v-if="selectedTA == 'price'" id="priceGraph" style="width: 300px"></canvas>
                             <canvas v-if="selectedTA == 'ema'"id="emaGraph" style="width: 300px"></canvas>
                             <canvas v-if="selectedTA == 'volatility'"id="volatilityGraph" style="width: 300px"></canvas>
                             <canvas v-if="selectedTA == 'macd'"id="macdGraph" style="width: 300px"></canvas>
@@ -149,6 +154,7 @@
                                 <span class="pt-2">
                                     <span class="pr-3">Cick to Generate Charts: </span>
                                     <button id="generate" v-on:click="setTickersDataPO()" class="btn generate-btn">Generate Charts</button>
+                                    <button id="generate" v-on:click="updateChart()" class="btn btn-warning">Update Charts</button>
                                 </span>
                             </div>
                         </div>
@@ -180,7 +186,7 @@
 </html>
 
 <script type="module">
-    import { URL, set_ticker_data, get_return_series, get_ema, get_volatility, get_macd, get_bollinger, URL_po, get_po, set_ticker_data_po} from "./callAPI/endpoint.js";
+    import { URL, set_ticker_data, get_return_series, get_price, get_ema, get_volatility, get_macd, get_bollinger, URL_po, get_po, set_ticker_data_po} from "./callAPI/endpoint.js";
     
     // for loading of stocks for dropdown
 
@@ -213,9 +219,18 @@
             el: '#app',
             data: {
                 stockSelected: ["PSL - Invesco DWA Consumer Staples Momentum ETF"],
-                selectedTA: "returns",
+                // stockSelectedPO: ["PSL - Invesco DWA Consumer Staples Momentum ETF"],
+                selectedTA: "price",
                 timeRange: 12,
                 risk: "Low",
+                pieChart: {},
+                efChart: {},
+                corrChart: {},
+                generated: false,
+                taTab: true,
+                poTab: false,
+                predictionTab: false,
+                combi: undefined
             },
             computed: {
                 stockList: function(){
@@ -241,7 +256,10 @@
                     set_ticker_data(URL, data).then(result =>{
                         if(this.selectedTA == "returns"){
                             this.generateReturnsGraph();
-                        } else if(this.selectedTA == "ema"){
+                        } else if(this.selectedTA == 'price'){
+                            this.generatePriceGraph();
+                        } 
+                        else if(this.selectedTA == "ema"){
                             this.generateEMAGraph();
                         } else if(this.selectedTA == "volatility"){
                             this.generateVolatilityGraph();
@@ -261,6 +279,8 @@
                     get_return_series(URL).then(result =>{
                         const data = result;
 
+                        console.log(data)
+
                         var returns_graph = document.getElementById("returnsGraph").getContext("2d");
                         if(window.bar != undefined){
                             window.bar.destroy(); 
@@ -275,6 +295,43 @@
                                         scaleLabel: {
                                             display: true,
                                             labelString: 'Returns'
+                                        }
+                                    }],
+                                    xAxes: [{
+                                        scaleLabel: {
+                                            display: true,
+                                            labelString: 'Date'
+                                        }
+                                    }]
+                                }
+                            }
+                        });
+                    })                  
+                },
+
+                generatePriceGraph: function(){
+
+                    document.getElementById("description").innerText = ""
+
+                    get_price(URL).then(result =>{
+                        const data = result;
+
+                        console.log(data)
+
+                        var returns_graph = document.getElementById("priceGraph").getContext("2d");
+                        if(window.bar != undefined){
+                            window.bar.destroy(); 
+                        } 
+
+                        window.bar = new Chart("priceGraph", {
+                            type: "line",
+                            data: data,
+                            options: {
+                                scales: {
+                                    yAxes: [{
+                                        scaleLabel: {
+                                            display: true,
+                                            labelString: 'Close Price'
                                         }
                                     }],
                                     xAxes: [{
@@ -467,6 +524,8 @@
                         funds_dict.push({"fund" : funds[i], "x": list_rt_vol[i]['x'], "y": list_rt_vol[i]['y']})
                         //funds_dict[funds[i]] = [list_rt_vol[i]['x'], list_rt_vol[i]['y']]
                     }
+
+                    this.combi = combi;
                     //console.log(funds)
                     //console.log(allocation)
                     document.getElementById("descriptionPO").innerText = "Based on your risk level selection, please refer to the chart generated below for the optimised weightage for the funds you selected. The RAR of this combination is at " + rar + " and is in a " + rar_evaluation + " range."
@@ -477,6 +536,7 @@
                 })
                 
             },
+
             displayChart: function(funds,combi){
                     const data = {
                         labels:funds,
@@ -496,7 +556,7 @@
                         pointRadius:100
                     }
 
-                    var myChart = new Chart("myChart", {
+                    this.pieChart = new Chart("myChart", {
                         
                         type: "pie",
                         data: data,
@@ -509,6 +569,14 @@
                         }
                     });
                 },
+
+            updateChart() {
+                this.setTickersDataPO();
+                // console.log(this.pieChart);
+                this.pieChart.data.datasets[0].data = this.combi;
+                // this.chart.labels = this.dates;
+                this.pieChart.update();
+            },
                 
             displayChart2: function(list_rt_vol,ef_list,funds_dict, funds, max_sharpe_ratio, min_vol_ratio){
                 const data = {
@@ -639,6 +707,10 @@
 
             ta: function (feature,evt) {
 
+                this.taTab = true;
+                this.poTab = false;
+                this.predictionTab = false;
+
                 let taTab = document.getElementById("ta-tab");
                 taTab.className = "nav-link active";
 
@@ -664,6 +736,10 @@
             },
 
             po: function(feature,evt){
+
+                this.taTab = false;
+                this.poTab = true;
+                this.predictionTab = false;
 
                 let taTab = document.getElementById("ta-tab");
                 taTab.className = "nav-link";
