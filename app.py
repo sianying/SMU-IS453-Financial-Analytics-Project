@@ -233,6 +233,26 @@ def getVolatilityValues():
 
     return return_data
 
+@app.route("/get_sharpe", methods=['GET'])
+def getSharpe():
+
+    return_df = df.copy()
+
+    risk_free_ann_ret_rate = 0.01 #rate for 1 year
+
+    return_df['returns_ts'] = return_df['Adj Close'].pct_change().dropna() #this is Rp
+    avg_daily_ret = return_df['returns_ts'].mean() #this is average of Rp
+
+    return_df['RiskFree_Rate'] = risk_free_ann_ret_rate/252 #this is Rf (per day)
+    avg_rf_ret = return_df['RiskFree_Rate'].mean() #this is average of Rf
+
+    return_df['Excess_ret_SPY'] = return_df["returns_ts"] - return_df['RiskFree_Rate']
+
+    sharpe = ((avg_daily_ret - avg_rf_ret) /return_df['Excess_ret_SPY'].std())*np.sqrt(252)
+
+    return {"sharpe": sharpe.round(3)}
+
+
 @app.route("/get_macd", methods = ['GET'])
 def getMACDValues():
     return_df = df.copy()

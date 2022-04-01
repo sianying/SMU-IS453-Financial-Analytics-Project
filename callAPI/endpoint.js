@@ -95,6 +95,23 @@ export async function get_volatility(URL) {
     }
 }
 
+export async function get_sharpe(URL) {
+    try {
+        
+        const response = await fetch(`${URL}/get_sharpe`)
+        if (response) {
+            const result = await response.json()
+            return result;
+        }
+    } catch(e) {
+        const error = {
+            "code": 404,
+            "data": e
+        }
+        return error;
+    }
+}
+
 export async function get_macd(URL) {
     try {
         
