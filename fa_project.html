@@ -45,9 +45,9 @@
                 </div>
                 <div class = "col-10">
                     <span v-if="taTab">Search for a fund (select only 1 fund): </span> 
-                    <span v-if="poTab">Search for a fund (select between 2 to 3 funds): </span> 
+                    <span v-if="poTab">Search for a fund (select between 2 to 4 funds): </span> 
                     <span v-if="predictionTab">Search for a fund (select only one fund): </span> 
-                    <select v-on:change="setTickersDataPO" v-model="stockSelected" data-width="90%" id="stock-selection" class="selectpicker mt-1 stockSearch" data-live-search="true" data-max-options="3" multiple></select>
+                    <select v-model="stockSelected" data-width="90%" id="stock-selection" class="selectpicker mt-1 stockSearch" data-live-search="true" data-max-options="4" multiple></select>
                 </div>
                 <!-- <div v-if="poTabSelected" class = "col-10">
                     Search for a fund: <select v-model="stockSelectedPO" data-width="90%" id="stock-selectionpo" class="selectpicker mt-1" data-live-search="true"data-max-options="3" multiple></select>
@@ -80,16 +80,14 @@
                                     <select v-model="selectedTA" class="selectpicker" data-width="fit">
                                         <option value="price">Close Price</option>
                                         <option value="returns">Return Series</option>
-                                        <option value="volatility">Volatility</option>
-                                        <option value="sharpe">Sharpe Ratio</option>
                                         <option value="ema">Exponential Moving Averages</option>
+                                        <option value="volatility">Volatility</option>
                                         <option value="macd">Moving Average Convergence Divergence (MACD)</option>
                                         <option value="bollinger">Bollinger Bands</option>
                                     </select>
                                     
                                 </div>
                                 <div>
-                                    
                                     <span class="pr-3">Time Range: </span>
                                     <select v-model="timeRange" class="selectpicker" data-width="fit">
                                         <option value=12>1Y</option>
@@ -103,10 +101,8 @@
                                     <span class="pr-3">Cick to Generate Charts: </span>
                                     <button id="generate" v-on:click="setTickersDataTA()" class="btn generate-btn">Generate Charts</button>
                                 </span>
-                                
                                 <span class="text-justify" style="width: 400px; display: inline-block" id ="description"></span>
                             </div>
-                            <div id="sharpeRatio" class="mt-3"></div>
                         </div>
 
                         <div width="200px" class="mt-3">
@@ -114,7 +110,6 @@
                             <canvas v-if="selectedTA == 'price'" id="priceGraph" style="width: 300px"></canvas>
                             <canvas v-if="selectedTA == 'ema'"id="emaGraph" style="width: 300px"></canvas>
                             <canvas v-if="selectedTA == 'volatility'"id="volatilityGraph" style="width: 300px"></canvas>
-                            <!-- <canvas v-if="selectedTA == 'sharpe'"id="sharpe" style="width: 300px"></canvas> -->
                             <canvas v-if="selectedTA == 'macd'"id="macdGraph" style="width: 300px"></canvas>
                             <canvas v-if="selectedTA == 'bollinger'"id="bollingerGraph" style="width: 300px"></canvas>
                         </div>
@@ -124,14 +119,14 @@
                     <div id="po" class="tabcontent my-3" style="display: none">
                         <div id="graphs">
                             <div class="my-2">
-                                <span class="pr-3">Time Range: </span>
-                                <select v-model="timeRange" class="selectpicker" data-width="fit"> -->
+                                <span class="pr-3">Time Range: 2 Years </span>
+                                <!-- <select v-model="timeRange" class="selectpicker" data-width="fit"> -->
                                     <!-- <option value=1>1M</option>
                                     <option value=3>3M</option>
                                     <option value=6>6M</option> -->
-                                    <option value=12>1Y</option> -->
-                                    <option value=60>5Y</option>
-                                </select>
+                                    <!-- <option value=12>1Y</option> -->
+                                    <!-- <option value=60>5Y</option> -->
+                                <!-- </select> -->
                                 
                             </div>
                             <div class="my-2">
@@ -159,7 +154,7 @@
                                 <span class="pt-2">
                                     <span class="pr-3">Cick to Generate Charts: </span>
                                     <button id="generate" v-on:click="generateCharts()" class="btn generate-btn">Generate Charts</button>
-                                    <button id="generate" v-on:click="updateChart()" class="btn btn-warning">Update Charts</button>
+                                    <button id="generate" v-on:click="updateCharts()" class="btn btn-warning">Update Charts</button>
                                 </span>
                             </div>
                         </div>
@@ -191,7 +186,7 @@
 </html>
 
 <script type="module">
-    import { URL, set_ticker_data, get_return_series, get_price, get_ema, get_volatility, get_macd, get_bollinger, URL_po, get_po, set_ticker_data_po, get_sharpe} from "./callAPI/endpoint.js";
+    import { URL, set_ticker_data, get_return_series, get_price, get_ema, get_volatility, get_macd, get_bollinger, URL_po, get_po, set_ticker_data_po} from "./callAPI/endpoint.js";
     
     // for loading of stocks for dropdown
 
@@ -223,25 +218,30 @@
     var app = new Vue({
             el: '#app',
             data: {
-                stockSelected: ["PSL - Invesco DWA Consumer Staples Momentum ETF"],
+                stockSelected: ["VGT - Vanguard Information Technology Index Fund   ", "XLE - Energy Select Sector SPDR Fund"],
                 // stockSelectedPO: ["PSL - Invesco DWA Consumer Staples Momentum ETF"],
                 selectedTA: "price",
                 timeRange: 12,
                 risk: "Low",
                 pieChart: {},
+                scatterChart: {},
                 efChart: {},
                 corrChart: {},
                 generated: false,
-                taTab: true,
-                poTab: false,
+                taTab: false,
+                poTab: true,
                 predictionTab: false,
-                combi: [],
+                //for all charts
                 funds: [],
+                //pie chart
+                combi: [],
+                //scatter chart
                 list_rt_vol: 0,
                 ef_list: [],
                 funds_dict: {},
                 max_sharpe_ratio: 0,
                 min_vol_ratio: 0,
+
                 rar: 0,
                 rar_evaluation: ""
             },
@@ -260,7 +260,6 @@
                 setTickersDataTA: function(){
 
                     document.getElementById("description").innerText = ""
-                    document.getElementById("sharpeRatio").innerText = ""
 
                     const data = {
                         "data": this.stockSelected, 
@@ -272,8 +271,6 @@
                             this.generateReturnsGraph();
                         } else if(this.selectedTA == 'price'){
                             this.generatePriceGraph();
-                        } else if(this.selectedTA == 'sharpe'){
-                            this.generateSharpe();
                         } 
                         else if(this.selectedTA == "ema"){
                             this.generateEMAGraph();
@@ -291,7 +288,6 @@
                 generateReturnsGraph: function(){
 
                     document.getElementById("description").innerText = ""
-                    document.getElementById("sharpeRatio").innerText = ""
 
                     get_return_series(URL).then(result =>{
                         const data = result;
@@ -329,7 +325,6 @@
                 generatePriceGraph: function(){
 
                     document.getElementById("description").innerText = ""
-                    document.getElementById("sharpeRatio").innerText = ""
 
                     get_price(URL).then(result =>{
                         const data = result;
@@ -366,7 +361,6 @@
                 generateEMAGraph: function(){
 
                     document.getElementById("description").innerText = ""
-                    document.getElementById("sharpeRatio").innerText = ""
 
                     get_ema(URL).then(result =>{
                         const data = result;
@@ -405,7 +399,6 @@
                 },
                 generateVolatilityGraph: function(){
                     document.getElementById("description").innerText = ""
-                    document.getElementById("sharpeRatio").innerText = ""
 
                     get_volatility(URL).then(result =>{
                         const data = result;
@@ -440,8 +433,6 @@
                 },
                 generateMACDGraph: function(){
 
-                    document.getElementById("description").innerText = ""
-                    document.getElementById("sharpeRatio").innerText = ""
 
                     get_macd(URL).then(result =>{
                         const data = result;
@@ -478,7 +469,6 @@
             generateBollingerGraph(){
 
                 document.getElementById("description").innerText = ""
-                document.getElementById("sharpeRatio").innerText = ""
 
                 get_bollinger(URL).then(result =>{
                     const data = result;
@@ -512,20 +502,11 @@
                 })
             },
 
-            generateSharpe(){
-                
-                document.getElementById("description").innerText = ""
-                get_sharpe(URL).then(result =>{
-                    document.getElementById("sharpeRatio").innerText = `The Sharpe ratio is ` + result.sharpe;
-                })
-
-            },
-
             setTickersDataPO: function(){
 
                 const data = {
                     "data": this.stockSelected, 
-                    "time_period": 12,
+                    "time_period": Number(this.timeRange),
                     "risk": this.risk
                 };
 
@@ -537,12 +518,25 @@
             },
 
             generateCharts(){
-                const generateBool = true
-                this.portfolioOptimisation(generateBool);
+                const generate = true;
+                const update = false;
+                this.portfolioOptimisation(generate, update);
 
-                document.getElementById("descriptionPO").innerText = "Based on your risk level selection, please refer to the chart generated below for the optimised weightage for the funds you selected. The RAR of this combination is at " + this.rar + " and is in a " + this.rar_evaluation + " range." 
+                document.getElementById("descriptionPO").innerText = "Based on your risk level selection, please refer to the chart generated below for the optimised weightage for the funds you selected. The RAR of this combination is at " + this.rar + " and is in a " + this.rar_evaluation + " range."
+
+                // this.displayChart();            
+                // this.displayChart2();          
     
             },
+
+            updateCharts() {
+                const generate = false;
+                const update = true;
+                this.portfolioOptimisation(generate, update);
+
+                document.getElementById("descriptionPO").innerText = "Based on your risk level selection, please refer to the chart generated below for the optimised weightage for the funds you selected. The RAR of this combination is at " + this.rar + " and is in a " + this.rar_evaluation + " range."
+            },
+
 
             portfolioOptimisation: function(generateBool=false, updateBool=false){
                 get_po(URL_po).then(result =>{
@@ -565,14 +559,6 @@
                         //funds_dict[funds[i]] = [list_rt_vol[i]['x'], list_rt_vol[i]['y']]
                     }
 
-                    // this.combi = combi;
-                    // //console.log(funds)
-                    // //console.log(allocation)
-                    // document.getElementById("descriptionPO").innerText = "Based on your risk level selection, please refer to the chart generated below for the optimised weightage for the funds you selected. The RAR of this combination is at " + rar + " and is in a " + rar_evaluation + " range."
-
-                    // this.displayChart(funds, combi);            
-                    // this.displayChart2(list_rt_vol,ef_list,funds_dict, funds, max_sharpe_ratio, min_vol_ratio);
-                    
                     //pie chart
                     this.funds = funds;
                     this.combi = combi;
@@ -587,61 +573,119 @@
 
                     this.rar = rar;
                     this.rar_evaluation = rar_evaluation;
-                    //console.log(funds)
-                    //console.log(allocation)
+
                     if (generateBool){
                         this.displayChart();
                         this.displayChart2();
                     } else if (updateBool) {
-                        console.log("yes")
+                        console.log("yes");
+                        this.updateChart();
+                        this.updateChart2();
                     }
-    
                 })
                 
             },
 
             displayChart: function(){
-                const data = {
-                    labels: this.funds,
-                    datasets: [
-                        {
-                            label: "Funds Composition",
-                            data: this.combi,
-                            backgroundColor: [
-                                'rgb(255,26,104)',
-                                'rgb(54,162,235)',
-                                'rgb(255,206,86)',
-                                'rgb(75,192,192)'
-                            ]
-                            
-                        }
-                    ],
-                    pointRadius:100
-                }
-
-                const ctx = document.getElementById('myChart');
-                this.pieChart = new Chart(ctx, {
-                    
-                    type: "pie",
-                    data: data,
-                    options: {
-                        plugins:{
-                            colorschemes:{
-                                scheme:  'brewer.YlGnBu'
-                            }   
-                        }
+                    const data = {
+                        labels: this.funds,
+                        datasets: [
+                            {
+                                label: "Funds Composition",
+                                data: this.combi,
+                                backgroundColor: [
+                                    'rgb(255,26,104)',
+                                    'rgb(54,162,235)',
+                                    'rgb(255,206,86)',
+                                    'rgb(75,192,192)'
+                                ]
+                                
+                            }
+                        ],
+                        pointRadius:100
                     }
-                });
+
+                    const ctx = document.getElementById('myChart');
+                    this.pieChart = new Chart(ctx, {
+                        
+                        type: "pie",
+                        data: data,
+                        options: {
+                            plugins:{
+                                colorschemes:{
+                                    scheme:  'brewer.YlGnBu'
+                                }   
+                            }
+                        }
+                    });
+                },
+
+            updateChart() {
+                const data = {
+                        labels: this.funds,
+                        datasets: [
+                            {
+                                label: "Funds Composition",
+                                data: this.combi,
+                                backgroundColor: [
+                                    'rgb(255,26,104)',
+                                    'rgb(54,162,235)',
+                                    'rgb(255,206,86)',
+                                    'rgb(75,192,192)'
+                                ]
+                                
+                            }
+                        ],
+                        pointRadius:100
+                    }
+                this.pieChart.data = data;
+                this.pieChart.update();
+
             },
 
-            // updateChart() {
-            //     this.setTickersDataPO();
-            //     // console.log(this.pieChart);
-            //     this.pieChart.data.datasets[0].data = this.combi;
-            //     // this.chart.labels = this.dates;
-            //     this.pieChart.update();
-            // },
-                
+            updateChart2(){
+                const data = {
+                    datasets: [
+                        {
+                            label: "Efficient Frontier",
+                            data: this.ef_list,
+                            pointBackgroundColor: 'YlGnBu',
+                            
+                        },
+                        {
+                            label: "FUNDS",
+                            data: this.funds_dict,
+                            backgroundColor: [
+                                'rgba(255,26,104,1)',
+                                'rgba(54,162,235,1)',
+                                'rgba(255,206,86,1)',
+                                'rgba(75,192,192,1)'
+                            ],
+
+
+                        },
+                        {
+                            label: "MAXSHARPE",
+                            data: this.max_sharpe_ratio,
+                            pointBackgroundColor: 'rgb(255,0,0)',
+                            pointStyle: 'rect',
+                            pointRadius: 25
+                        },
+                        {
+                            label: "MINVOL",
+                            data: this.min_vol_ratio,
+                            pointBackgroundColor: 'rgb(255,0,255)',
+                            pointStyle: 'triangle',
+                            pointRadius: 25
+                        },
+                    ],
+
+                }
+                this.scatterChart.data = data;
+                this.scatterChart.update();
+
+            },
+
             displayChart2: function(){
                 const data = {
                     datasets: [
@@ -697,9 +741,8 @@
 
                 //     }
                 // }
-                
                 const ctx = document.getElementById('myChart1');
-                var myChart = new Chart(ctx, {
+                this.scatterChart = new Chart(ctx, {
                     
                     type: "scatter",
                     data: data,
