@@ -82,6 +82,7 @@
                                         <option value="returns">Return Series</option>
                                         <option value="ema">Exponential Moving Averages</option>
                                         <option value="volatility">Volatility</option>
+                                        <option value="sharpe">Sharpe Ratio</option>
                                         <option value="macd">Moving Average Convergence Divergence (MACD)</option>
                                         <option value="bollinger">Bollinger Bands</option>
                                     </select>
@@ -103,6 +104,7 @@
                                 </span>
                                 <span class="text-justify" style="width: 400px; display: inline-block" id ="description"></span>
                             </div>
+                            <div id="sharpeRatio" class="mt-3"></div>
                         </div>
 
                         <div width="200px" class="mt-3">
@@ -110,6 +112,8 @@
                             <canvas v-if="selectedTA == 'price'" id="priceGraph" style="width: 300px"></canvas>
                             <canvas v-if="selectedTA == 'ema'"id="emaGraph" style="width: 300px"></canvas>
                             <canvas v-if="selectedTA == 'volatility'"id="volatilityGraph" style="width: 300px"></canvas>
+                            <canvas v-if="selectedTA == 'sharpe'"id="sharpe" style="width: 300px"></canvas>
+                            <!-- <canvas v-else class="d-none"></canvas> -->
                             <canvas v-if="selectedTA == 'macd'"id="macdGraph" style="width: 300px"></canvas>
                             <canvas v-if="selectedTA == 'bollinger'"id="bollingerGraph" style="width: 300px"></canvas>
                         </div>
@@ -186,7 +190,7 @@
 </html>
 
 <script type="module">
-    import { URL, set_ticker_data, get_return_series, get_price, get_ema, get_volatility, get_macd, get_bollinger, URL_po, get_po, set_ticker_data_po} from "./callAPI/endpoint.js";
+    import { URL, set_ticker_data, get_return_series, get_price, get_ema, get_volatility, get_macd, get_bollinger, URL_po, get_po, set_ticker_data_po, get_sharpe} from "./callAPI/endpoint.js";
     
     // for loading of stocks for dropdown
 
@@ -260,6 +264,7 @@
                 setTickersDataTA: function(){
 
                     document.getElementById("description").innerText = ""
+                    document.getElementById("sharpeRatio").innerText = ""
 
                     const data = {
                         "data": this.stockSelected, 
@@ -271,6 +276,8 @@
                             this.generateReturnsGraph();
                         } else if(this.selectedTA == 'price'){
                             this.generatePriceGraph();
+                        } else if(this.selectedTA == 'sharpe'){
+                            this.generateSharpe();
                         } 
                         else if(this.selectedTA == "ema"){
                             this.generateEMAGraph();
@@ -288,11 +295,12 @@
                 generateReturnsGraph: function(){
 
                     document.getElementById("description").innerText = ""
+                    document.getElementById("sharpeRatio").innerText = ""
 
                     get_return_series(URL).then(result =>{
                         const data = result;
 
-                        console.log(data)
+                        // console.log(data)
 
                         var returns_graph = document.getElementById("returnsGraph").getContext("2d");
                         if(window.bar != undefined){
@@ -325,11 +333,12 @@
                 generatePriceGraph: function(){
 
                     document.getElementById("description").innerText = ""
+                    document.getElementById("sharpeRatio").innerText = ""
 
                     get_price(URL).then(result =>{
                         const data = result;
 
-                        console.log(data)
+                        // console.log(data)
 
                         var returns_graph = document.getElementById("priceGraph").getContext("2d");
                         if(window.bar != undefined){
@@ -361,6 +370,7 @@
                 generateEMAGraph: function(){
 
                     document.getElementById("description").innerText = ""
+                    document.getElementById("sharpeRatio").innerText = ""
 
                     get_ema(URL).then(result =>{
                         const data = result;
@@ -399,6 +409,7 @@
                 },
                 generateVolatilityGraph: function(){
                     document.getElementById("description").innerText = ""
+                    document.getElementById("sharpeRatio").innerText = ""
 
                     get_volatility(URL).then(result =>{
                         const data = result;
@@ -433,6 +444,8 @@
                 },
                 generateMACDGraph: function(){
 
+                    document.getElementById("description").innerText = ""
+                    document.getElementById("sharpeRatio").innerText = ""
 
                     get_macd(URL).then(result =>{
                         const data = result;
@@ -469,6 +482,7 @@
             generateBollingerGraph(){
 
                 document.getElementById("description").innerText = ""
+                document.getElementById("sharpeRatio").innerText = ""
 
                 get_bollinger(URL).then(result =>{
                     const data = result;
@@ -500,6 +514,15 @@
                 
                     document.getElementById("description").innerText = "When the close price touches the lower band, it indicates a buy signal (oversold scenario). When it touches the upper band, it indicates a sell signal (overbought scenario)"
                 })
+            },
+
+            generateSharpe(){
+                
+                // document.getElementById("description").innerText = ""
+                get_sharpe(URL).then(result =>{
+                    document.getElementById("sharpeRatio").innerText = `The Sharpe ratio is ` + result.sharpe;
+                })
+
             },
 
             setTickersDataPO: function(){
