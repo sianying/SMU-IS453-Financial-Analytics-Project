@@ -20,6 +20,7 @@ CORS(app)
 df = ""
 risk_level = ""
 user_ticker = ""
+time_period =""
 @app.route("/set_ticker_data", methods = ['POST'])
 def send_ticker_data():
 
@@ -27,22 +28,25 @@ def send_ticker_data():
     global df
     global risk_level
     global user_ticker
+    global time_period
     #using data from frontend input
     data = request.get_json()
-    #print(data)
+    print(data)
     # #assigning ticker and time period, 12 refers to 12 months for time_period
     ticker = data['data']
-    time_period = data['time_period']
+    time_period = int(data['time_period'])
     risk_level = data['risk']
     user_tickers = [ticker.split(" ")[0] for ticker in ticker]
     # #start and end dates
     now = dt.date.today()
     start_date = str(now - relativedelta(months=time_period))
     end_date = str(now)
+    start_date1 = "2020-01-01"
+    end_date1 = "2021-12-31"
 
     # #calling yfinance api to reassigning the global df
     df = yf.download(user_tickers, start=start_date, end=end_date)
-    #print(type(ticker))
+    print(type(ticker))
     user_ticker = user_tickers
 
 
@@ -57,16 +61,11 @@ def get_po():
     return_df = df.copy()
     #dates = list(return_df.index.strftime("%Y-%m-%d"))
     data = "123"
-    
-    #print(user_ticker)
-    #print(type(user_ticker))
-    #print(return_df)
-
-    
-    #return_df['return_series'] = ((return_df['Adj Close'].pct_change() +1).cumprod() - 1)
-    #data = return_df['return_series'].dropna()
-    #data = data.to_list()
+    print("risk level", risk_level)
+    print(user_ticker)
+    print("time period", time_period)
     df_closes = return_df['Adj Close']
+    close_price = return_df['Close']
     log_ret = np.log(df_closes/df_closes.shift(1))
     returns = df_closes.pct_change().dropna()
     mean_returns = returns.mean()
@@ -78,14 +77,25 @@ def get_po():
     avg_daily_ret = returns_ts.mean()
     returns_ts['RiskFree_Rate'] = risk_free_rate/252
     avg_rf_ret = returns_ts['RiskFree_Rate'].mean()
+    ret_series_close = []
+    return_series_close = (close_price.pct_change()+ 1).cumprod() - 1 
+    return_series_close = return_series_close.dropna()
+    for funds in user_ticker:
+        ret_series_close.append(return_series_close[funds].values.tolist())
+    #correlation
+    correlation = return_series_close.corr()
+    funds = return_series_close.columns.values.tolist()
+    correlation_df = pd.DataFrame(correlation)
+    list_correlation_df = correlation_df.values.tolist()
+    print(list_correlation_df)
+    # # calculate individualsharpe ratio   
+    # ind_sharpe = []
+    # for i in range (len(user_ticker)):
+    # #Add the excess return columns for each ETF
+    #     returns_ts['Excess_ret_' + user_ticker[i]] = returns_ts[user_ticker[i]] - returns_ts['RiskFree_Rate']
+    #     sharpe = ((avg_daily_ret[user_ticker[i]] - avg_rf_ret) /returns_ts['Excess_ret_' + user_ticker[i]].std())*np.sqrt(252)
+    #     ind_sharpe.append(sharpe)
 
-    # calculate individualsharpe ratio   
-    ind_sharpe = []
-    for i in range (len(user_ticker)):
-    #Add the excess return columns for each ETF
-        returns_ts['Excess_ret_' + user_ticker[i]] = returns_ts[user_ticker[i]] - returns_ts['RiskFree_Rate']
-        sharpe = ((avg_daily_ret[user_ticker[i]] - avg_rf_ret) /returns_ts['Excess_ret_' + user_ticker[i]].std())*np.sqrt(252)
-        ind_sharpe.append(sharpe)
     an_vol = np.std(returns) * np.sqrt(252) #volatility of funds
     an_rt = mean_returns * 252
     results = np.zeros((3,num_portfolios))
@@ -101,26 +111,27 @@ def get_po():
             weights /= np.sum(weights)
             weights_record.append(np.round(weights,2))
             all_weights[i,:] = weights
-            ret_arr[i] = np.sum( (log_ret.mean() * weights * 252))
-            vol_arr[i] = np.sqrt(np.dot(weights.T, np.dot(log_ret.cov()*252, weights)))
+            ret_arr[i] = np.sum( (mean_returns * weights * 252))
+            vol_arr[i] = np.sqrt(np.dot(weights.T, np.dot(cov_matrix*252, weights)))
+
+            # ret_arr[i] = np.sum( (log_ret.mean() * weights * 252))
+            # vol_arr[i] = np.sqrt(np.dot(weights.T, np.dot(log_ret.cov()*252, weights)))
             sharpe_arr[i] = ret_arr[i]/vol_arr[i]
             ef_list.append({"x": vol_arr[i], "y": ret_arr[i]})
     
-    max_sharpe_ratio = sharpe_arr.max()
-    max_sharpe_ratio_idx = sharpe_arr.argmax()
-    max_sr_ret = ret_arr[max_sharpe_ratio_idx]
-    max_sr_vol = vol_arr[max_sharpe_ratio_idx]
+    # max_sharpe_ratio = sharpe_arr.max()
+    # max_sharpe_ratio_idx = sharpe_arr.argmax()
+    # max_sr_ret = ret_arr[max_sharpe_ratio_idx]
+    # max_sr_vol = vol_arr[max_sharpe_ratio_idx]
 
-    max_sharpe_ratio_point = [{"x": max_sr_vol, "y": max_sr_ret}]
+    # max_sharpe_ratio_point = [{"x": max_sr_vol, "y": max_sr_ret}]
     
-    min_vol_vol = vol_arr[vol_arr.argmin()]
-    min_vol_ret = ret_arr[vol_arr.argmin()]
-    min_vol_sharpe_ratio = sharpe_arr[vol_arr.argmin()]
-    min_vol_sharpe_ratio_point = [{"x": min_vol_vol, "y": min_vol_ret}]
+    # min_vol_vol = vol_arr[vol_arr.argmin()]
+    # min_vol_ret = ret_arr[vol_arr.argmin()]
+    # min_vol_sharpe_ratio = sharpe_arr[vol_arr.argmin()]
+    # min_vol_sharpe_ratio_point = [{"x": min_vol_vol, "y": min_vol_ret}]
 
     max_ret = ret_arr.max()
-    print("this is max ret")
-    print(max_ret)
     min_ret = ret_arr.min()
     
 
@@ -128,8 +139,7 @@ def get_po():
         weights = np.array(weights)
         ret = np.sum((mean_returns*weights ) *252)
         vol = np.sqrt(np.dot(weights.T, np.dot(cov_matrix, weights))) * np.sqrt(252)
-        sr = ret/vol
-        return np.array([ret, vol, sr])
+        return np.array([ret, vol])
 
     def neg_sharpe(weights):
     # the number 2 is the sharpe ratio index from the get_ret_vol_sr
@@ -143,16 +153,16 @@ def get_po():
     bounds = ()
     for i in range(len(user_ticker)):
         bounds = bounds + ((0,1),)
-    #bounds = ((0,1),(0,1),(0,1),(0,1))
     no_of_assets = len(user_ticker)
     #opt_results = sco.minimize(neg_sharpe,init_guess,method="SLSQP", bounds = bounds, constraints = cons)
-    #print(opt_results)
-    frontier_y = np.linspace(min_ret,max_ret,500)
+    frontier_y = np.linspace(min_ret,max_ret,100)   
     def minimize_volatility(weights):
         return get_ret_vol_sr(weights)[1]
     list_vol = [] #volatility
     list_ret = [] #return
     list_weight = []
+    list_sr = []
+    #print("frontier_y", frontier_y)
     for possible_return in frontier_y:
         cons = ({'type': 'eq', 'fun': check_sum},
                 {'type': 'eq', 'fun': lambda w: get_ret_vol_sr(w)[0] - possible_return}
@@ -160,176 +170,167 @@ def get_po():
         a_result = sco.minimize(minimize_volatility,no_of_assets*[1./no_of_assets,],method="SLSQP", bounds = bounds, constraints = cons)
         list_vol.append(a_result['fun'])
         list_ret.append(possible_return)
+        list_sr.append((possible_return - risk_free_rate)/a_result['fun'])
         list_weight.append(a_result['x'])
     
     list_vol_to_arr = list_vol.copy()
     list_vol_to_arr.sort()
-    print("this is max vol")
-    print(list_vol_to_arr[-1])
-    low_risk_vol = list_vol_to_arr[0]
-    med_risk_vol = list_vol_to_arr[24]
+    list_sr_to_arr = list_sr.copy()
+    list_sr_to_arr.sort()
+    max_sr = list_sr_to_arr[-1]
+    for i in range(len(list_sr)):
+        if(max_sr == list_sr[i]):
+            max_sr_idx = i
+    print("max_sr", max_sr)
+    low_risk_vol = list_vol_to_arr[33]
+    med_risk_vol = list_vol_to_arr[66]
+    high_risk_vol = list_vol_to_arr[-1]
     for i in range(len(list_vol)):
         if(low_risk_vol == list_vol[i]):
             low_risk_vol_idx = i
         elif(med_risk_vol == list_vol[i]):
             med_risk_vol_idx = i
+        elif(high_risk_vol == list_vol[i]):
+            high_risk_vol_idx = i
     low_risk_ret = list_ret[low_risk_vol_idx]
     med_risk_ret = list_ret[med_risk_vol_idx]
+    high_risk_ret = list_ret[high_risk_vol_idx]
     low_risk_ret_point = [{"x": low_risk_vol, "y": low_risk_ret}]
+    med_risk_ret_point = [{"x": med_risk_vol, "y": med_risk_ret}]
+    high_risk_ret_point = [{"x": high_risk_vol, "y": high_risk_ret}]    
     low_risk_sr = (low_risk_ret - risk_free_rate) / low_risk_vol
     med_risk_sr = (med_risk_ret - risk_free_rate) / med_risk_vol
-    med_risk_ret_point = [{"x": med_risk_vol, "y": med_risk_ret}]
-    low_risk_weight = list_weight[low_risk_vol_idx]
+    high_risk_sr = (high_risk_ret - risk_free_rate) / high_risk_vol
 
+    low_risk_weight = list_weight[low_risk_vol_idx]
     med_risk_weight = list_weight[med_risk_vol_idx]
+    high_risk_weight = list_weight[high_risk_vol_idx]    
+    print("this is low risk volatility", low_risk_vol)
+    print("This is low risk ret", low_risk_ret)
+    print("THIS IS LOW RISK SR")
+    print("calculated",low_risk_sr)
+    print(low_risk_weight)
+
+    low_rar_evaluation = ""
+    if (low_risk_sr < 1):
+        low_rar_evaluation = "Not Good"
+    elif (1 <= low_risk_sr <= 1.99):
+        low_rar_evaluation= "Acceptable - Good"
+    elif (2 <= low_risk_sr <= 2.99):
+        low_rar_evaluation = "Very Good"
+    else:
+        low_rar_evaluation = "Great"
+
+
+    med_rar_evaluation = ""
+    if (med_risk_sr < 1):
+        med_rar_evaluation = "Not Good"
+    elif (1 <= med_risk_sr <= 1.99):
+        med_rar_evaluation= "Acceptable - Good"
+    elif (2 <= med_risk_sr <= 2.99):
+        med_rar_evaluation = "Very Good"
+    else:
+        med_rar_evaluation = "Great"
+
+    high_rar_evaluation = ""
+    if (high_risk_sr < 1):
+        high_rar_evaluation = "Not Good"
+    elif (1 <= high_risk_sr <= 1.99):
+        high_rar_evaluation = "Acceptable - Good"
+    elif (2 <= high_risk_sr <= 2.99):
+        high_rar_evaluation = "Very Good"
+    else:
+        high_rar_evaluation = "Great"
+
+
+    
+    print("this is med volatility", med_risk_vol)
+    print("This is ret", med_risk_ret)
+    print("THIS IS MED RISK SR")
+    print(med_risk_sr)
+    print(med_risk_weight)
+
+    print("this is high volatility", high_risk_vol)
+    print("This is ret", high_risk_ret)
+    print("THIS IS HIGH RISK SR")
+    print(high_risk_sr)
+    print(high_risk_weight)
+    
     list_ret_to_arr = list_ret.copy()
     list_ret_to_arr.sort()
-    high_risk_ret = list_ret_to_arr[27]
-    for i in range (len(list_ret)):
-        if(high_risk_ret == list_ret[i]):
-            high_risk_vol_idx = i
-    high_risk_vol = list_vol[high_risk_vol_idx]
-    high_risk_sr = (high_risk_ret - risk_free_rate) / high_risk_vol
-    high_risk_weight = list_weight[high_risk_vol_idx]
-    high_risk_ret_point = [{"x": high_risk_vol, "y": high_risk_ret}]
+    high_risk_ret = list_ret_to_arr[-1]
+
+
+    max_sr = list_sr_to_arr[-1]
+    for i in range(len(list_sr)):
+        if(max_sr == list_sr[i]):
+            max_sr_idx = i
+    print("max_sr", max_sr)
+
+
+    # for i in range (len(list_ret)):
+    #     if(high_risk_ret == list_ret[i]):
+    #         high_risk_vol_idx = i
+    best_risk_vol = list_vol[max_sr_idx]
+    best_risk_ret = list_ret[max_sr_idx]
+    # high_risk_sr = (high_risk_ret - risk_free_rate) / high_risk_vol
+    best_risk_weight = list_weight[max_sr_idx]
+    best_risk_ret_point = [{"x": best_risk_vol, "y": best_risk_ret}]
+    
+    print("this is high volatility", best_risk_vol)
+    print("This is high ret", best_risk_ret)
+    print("THIS IS high RISK SR")
+    print(max_sr)
+    print(best_risk_weight)
+    # Efficient Frontier Line
     best_ef_list = []
     for e in range(len(list_vol)):
         best_ef_list.append({"x": list_vol[e], "y": frontier_y[e]})
 
-    print(low_risk_vol,type(low_risk_vol))
-    print(low_risk_ret, type(low_risk_ret))
-    print(low_risk_sr, type(low_risk_sr))
-    
-
-   # print("--------"*80)
-   # print(frontier_x[1],frontier_y[1])
-
-            #returns = np.sum(mean_returns*weights ) *252
-
-            # std = np.sqrt(np.dot(weights.T, np.dot(cov_matrix, weights))) * np.sqrt(252)
-            # portfolio_std_dev, portfolio_return = std, returns
-            # results[0,i] = std #volatility
-            # results[1,i] = returns #returns
-            # results[2,i] = (returns - risk_free_rate) / std #sharpe ratio
-            # ef_list.append({"x":results[0,i], "y": results[1,i]}) #Efficient Frontier List to be returned in the chartjs format
-            
-    #max_sharpe_idx = np.argmax(results[2]) #Finding the max sharpe idx #
-    #sdp, rp = results[0,max_sharpe_idx], results[1,max_sharpe_idx] #sdp => volatility of the max sharpe, rp => returns of the max sharpe
-    # max_sharpe_allocation = pd.DataFrame(weights_record[max_sharpe_idx],index=df_closes.columns,columns=['allocation']) #Finding the weights_records aka combination
-    # max_sharpe_allocation.allocation = [round(i,2)for i in max_sharpe_allocation.allocation]
-    # max_sharpe_allocation = max_sharpe_allocation.T 
-
-    # min_vol_idx = np.argmin(results[0])
-    # sdp_min, rp_min = results[0,min_vol_idx], results[1,min_vol_idx]
-    # min_vol_allocation = pd.DataFrame(weights_record[min_vol_idx],index=df_closes.columns,columns=['allocation'])
-    # min_vol_allocation.allocation = [round(i,2)for i in min_vol_allocation.allocation]
-    # min_vol_allocation = min_vol_allocation.T
-    
-
-
-    # results1 = results[:, results[0, :].argsort()] #sort according to volatility in ascending order
-    # #LOW RISK
-    # low_risk_rar = results1[2,999] #Getting the RAR value for low ris
-    # tuple_low_risk_weight_idx = np.where(results[2] == low_risk_rar) # Find index from initial results list where RAR equals to low risk rar
-    # print("SD", results[0,999], type(results[0,999]))
-    # print("RET", results[1,999], type(results[1,999]))
-    # low_risk_point = [{"x": results[0,999], "y": results[1,999]}]
-    # new_tuple_low_risk = tuple_low_risk_weight_idx[0].astype(int)
-    # low_risk_combi = weights_record[new_tuple_low_risk[0]] #LOW RISK WEIGHT COMBI
-    # low_rar_evaluation = ""
-    # if (low_risk_rar < 1):
-    #     low_rar_evaluation = "Not Good"
-    # elif (1 <= low_risk_rar <= 1.99):
-    #     low_rar_evaluation= "Acceptable - Good"
-    # elif (2 <= low_risk_rar <= 2.99):
-    #     low_rar_evaluation = "Very Good"
-    # else:
-    #     low_rar_evaluation = "Great"
-
-    # med_risk_rar = results1[2, 1999]
-    # tuple_med_risk_weight_idx = np.where(results[2] == med_risk_rar) #finding the weight composition by finding the index first
-    # new_tuple_med_risk = tuple_med_risk_weight_idx[0].astype(int)
-    # med_risk_combi = weights_record[new_tuple_med_risk[0]] #med RISK WEIGHT COMBI
-
-    # med_rar_evaluation = ""
-    # if (med_risk_rar < 1):
-    #     med_rar_evaluation = "Not Good"
-    # elif (1 <= med_risk_rar <= 1.99):
-    #     med_rar_evaluation= "Acceptable - Good"
-    # elif (2 <= med_risk_rar <= 2.99):
-    #     med_rar_evaluation = "Very Good"
-    # else:
-    #     med_rar_evaluation = "Great"
-
-
-
-    # high_risk_rar = results1[2,2999]
-    # tuple_high_risk_weight_idx = np.where(results[2] == high_risk_rar) #finding the weight composition by finding the index first
-    # new_tuple_high_risk = tuple_high_risk_weight_idx[0].astype(int)
-    # high_risk_combi = weights_record[new_tuple_high_risk[0]] #med RISK WEIGHT COMBI
-
-    # high_rar_evaluation = ""
-    # if (high_risk_rar < 1):
-    #     high_rar_evaluation = "Not Good"
-    # elif (1 <= high_risk_rar <= 1.99):
-    #     high_rar_evaluation= "Acceptable - Good"
-    # elif (2 <= high_risk_rar <= 2.99):
-    #     high_rar_evaluation = "Very Good"
-    # else:
-    #     high_rar_evaluation = "Great"
-
-    #print(new_tuple_low_risk[0], type(new_tuple_low_risk[0]),"<<<<<<<<<<<<<<<<<<")
-    # print("weight composition", weights_record[new_tuple_low_risk[0]], type(weights_record[new_tuple_low_risk[0]] ))
-    # print("HERE"*40)
-    # print("low risk",low_risk_rar, type(low_risk_rar))
-    
-    # max_sharpe_weight = list(weights_record[max_sharpe_idx])
-    # min_vol_weight = list(weights_record[min_vol_idx])
-    # max_sharpe_value = results[2,max_sharpe_idx].astype(float)
-    # min_vol_sharpe_value = results[2,min_vol_idx].astype(float)
-    # list_an_rt = list(an_rt)
-    # list_rt_vol = []
-    # for i in range(len(list_an_rt)):
-    #     list_rt_vol.append({"x":an_vol[i], "y": an_rt[i]})
-    
-    # #print( "list", type(low_risk_rar), "Low risk combi", type(low_risk_combi))
-    # low_risk_combination = list(low_risk_combi)
-    # med_risk_combination = list(med_risk_combi)
-    # high_risk_combination = list(high_risk_combi)
-    # max_sharpe_ratio = [{"x": sdp, "y": rp}] # Used to plot the max sharpe ratio on EF graph 
-    # min_vol_ratio = [{"x" : sdp_min, "y": rp_min}] # Used to plot the min vol ratio on EF graph
-
     dates = list(df.index.strftime("%Y-%m-%d"))
-    print("MED RISK WEIGHT")
-    print(high_risk_weight)
     if risk_level == 'Low':
         data = {
             "dates": dates, 
-            "ticker": user_ticker,
+            "ticker": funds,
             "combi" : list(low_risk_weight),
             "ef_list": ef_list,
             "best_ef_list": best_ef_list,
-            "risk_level_point" : low_risk_ret_point
+            "risk_level_point" : low_risk_ret_point,
+            "return_series" : ret_series_close,
+            "volatility": round(low_risk_vol,2),
+            "returns": round(low_risk_ret,2),
+            "rar": round(low_risk_sr,20),
+            "rar_evaluation": low_rar_evaluation
         }
         return data
     elif risk_level == 'Medium':
         data = {
             "dates": dates, 
-            "ticker": user_ticker,
+            "ticker": funds,
             "combi" : list(med_risk_weight),
             "ef_list": ef_list,
             "best_ef_list": best_ef_list,
-            "risk_level_point" : med_risk_ret_point
+            "risk_level_point" : med_risk_ret_point,
+            "return_series" : ret_series_close,
+            "volatility": round(med_risk_vol,2),
+            "returns": round(med_risk_ret,2),
+            "rar": round(med_risk_sr,2),
+            "rar_evaluation": med_rar_evaluation
         }
         return data
     elif risk_level == 'High':
         data = {
             "dates": dates, 
-            "ticker": user_ticker,
+            "ticker": funds,
             "combi" : list(high_risk_weight),
             "ef_list": ef_list,
             "best_ef_list": best_ef_list,
-            "risk_level_point" : high_risk_ret_point
+            "risk_level_point" : high_risk_ret_point,
+            "return_series" : ret_series_close,
+            "volatility": round(high_risk_vol,2),
+            "returns": round(high_risk_ret,2),
+            "rar": round(high_risk_sr,2),
+            "rar_evaluation": high_rar_evaluation
         }
         return data
 
