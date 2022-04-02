@@ -47,7 +47,7 @@
                     <span v-if="taTab">Search for a fund (select only 1 fund): </span> 
                     <span v-if="poTab">Search for a fund (select between 2 to 4 funds): </span> 
                     <span v-if="predictionTab">Search for a fund (select only one fund): </span> 
-                    <select v-model="stockSelected" data-width="90%" id="stock-selection" class="selectpicker mt-1 stockSearch" data-live-search="true" data-max-options="4" multiple></select>
+                    <select v-on:change="setTickersDataPO()" v-model="stockSelected" data-width="90%" id="stock-selection" class="selectpicker mt-1 stockSearch" data-live-search="true" data-max-options="4" multiple></select>
                 </div>
                 <!-- <div v-if="poTabSelected" class = "col-10">
                     Search for a fund: <select v-model="stockSelectedPO" data-width="90%" id="stock-selectionpo" class="selectpicker mt-1" data-live-search="true"data-max-options="3" multiple></select>
@@ -218,7 +218,7 @@
     var app = new Vue({
             el: '#app',
             data: {
-                stockSelected: ["VGT - Vanguard Information Technology Index Fund   ", "XLE - Energy Select Sector SPDR Fund"],
+                stockSelected: ["PSL - Invesco DWA Consumer Staples Momentum ETF"],
                 // stockSelectedPO: ["PSL - Invesco DWA Consumer Staples Momentum ETF"],
                 selectedTA: "price",
                 timeRange: 12,
@@ -228,8 +228,8 @@
                 efChart: {},
                 corrChart: {},
                 generated: false,
-                taTab: false,
-                poTab: true,
+                taTab: true,
+                poTab: false,
                 predictionTab: false,
                 //for all charts
                 funds: [],
@@ -522,7 +522,7 @@
                 const update = false;
                 this.portfolioOptimisation(generate, update);
 
-                document.getElementById("descriptionPO").innerText = "Based on your risk level selection, please refer to the chart generated below for the optimised weightage for the funds you selected. The RAR of this combination is at " + this.rar + " and is in a " + this.rar_evaluation + " range."
+                
 
                 // this.displayChart();            
                 // this.displayChart2();          
@@ -575,10 +575,11 @@
                     this.rar_evaluation = rar_evaluation;
 
                     if (generateBool){
+                        document.getElementById("descriptionPO").innerText = "Based on your risk level selection, please refer to the chart generated below for the optimised weightage for the funds you selected. The RAR of this combination is at " + this.rar + " and is in a " + this.rar_evaluation + " range."
                         this.displayChart();
                         this.displayChart2();
                     } else if (updateBool) {
-                        console.log("yes");
+                        // console.log("yes");
                         this.updateChart();
                         this.updateChart2();
                     }
