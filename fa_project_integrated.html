@@ -166,6 +166,7 @@
                         <div width="200px" >
                             <canvas id="myChart" class="p-3" ></canvas>
                             <canvas id="myChart1" class="p-3" ></canvas>
+                            <canvas id="correlation" class="p-3" ></canvas>
                         </div>
                     </div>
 
@@ -599,7 +600,7 @@
                     this.dates = dates;
 
                     if (generateBool){
-                        document.getElementById("descriptionPO").innerText = "Based on your risk level selection, please refer to the chart generated below for the optimised weightage for the funds you selected. The RAR of this combination is at " + this.rar + " and is in a " + this.rar_evaluation + " range."
+                        document.getElementById("descriptionPO").innerHTML = "Based on your risk level selection, the pie chart below shows the optimised combination for the funds you selected. <br> The RAR of this combination is: " + this.rar + " and is in a " + this.rar_evaluation + " range. <br> The returns of this combination is: " + this.returns + "<br> The volatility of this combination is: " + this.volatility
                         this.displayChart();
                         this.displayChart2();
                         this.displayChart3();
