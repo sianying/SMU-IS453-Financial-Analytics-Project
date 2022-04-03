@@ -526,7 +526,7 @@
             },
 
             setTickersDataPO: function(){
-
+                document.getElementById("descriptionPO").innerHTML = ""
                 const data = {
                     "data": this.stockSelected, 
                     "time_period": Number(this.timeRange),
@@ -557,7 +557,7 @@
                 const update = true;
                 this.portfolioOptimisation(generate, update);
 
-                document.getElementById("descriptionPO").innerHTML = "Based on your risk level selection, the pie chart below shows the optimised combination for the funds you selected. <br> The RAR of this combination is: " + this.rar + " and is in a " + this.rar_evaluation + " range. <br> The returns of this combination is: " + this.returns + "<br> The volatility of this combination is: " + this.volatility
+                //document.getElementById("descriptionPO").innerHTML = "Based on your risk level selection, the pie chart below shows the optimised combination for the funds you selected. <br> The RAR of this combination is: " + this.rar + " and is in a " + this.rar_evaluation + " range. <br> The returns of this combination is: " + this.returns + "<br> The volatility of this combination is: " + this.volatility
             },
 
 
@@ -606,6 +606,7 @@
                         this.displayChart3();
                     } else if (updateBool) {
                         // console.log("yes");
+                        document.getElementById("descriptionPO").innerHTML = "Based on your risk level selection, the pie chart below shows the optimised combination for the funds you selected. <br> The RAR of this combination is: " + this.rar + " and is in a " + this.rar_evaluation + " range. <br> The returns of this combination is: " + this.returns + "<br> The volatility of this combination is: " + this.volatility
                         this.updateChart();
                         this.updateChart2();
                         this.updateChart3();
@@ -737,12 +738,23 @@
                     type: "scatter",
                     data: data,
                     options: {
-                            //colorschemes:{
-                                //   scheme:  'brewer.YlGnBu'
-                            //}   
+                            scales:{
+                                yAxes: [{
+                                    scaleLabel: {
+                                        display: true,
+                                        labelString: "Return"
+                                    }
+                                }],
+                                xAxes: [{
+                                    scaleLabel: {
+                                        display: true,
+                                        labelString: "Volatility"
+                                    }
+                                }]
+                            }   
                         
                     },
-                    // plugins: [scatterDataLabels]
+            
                 })
                     
             },      
@@ -783,6 +795,20 @@
                         type: "line",
                         data: data,
                         options: {
+                            scales:{
+                                yAxes: [{
+                                    scaleLabel: {
+                                        display: true,
+                                        labelString: 'Returns'
+                                    }
+                                }],
+                                xAxes: [{
+                                    scaleLabel: {
+                                        display:true,
+                                        labelString: 'Date'
+                                    }
+                                }]
+                            }
                         }
                     });
 
