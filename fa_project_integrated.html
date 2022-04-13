@@ -31,6 +31,14 @@
     <!-- Vue link -->
     <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
 
+    <!-- AnyCharts -->
+    <script src="https://cdn.anychart.com/releases/8.11.0/js/anychart-core.min.js"></script>
+    <!-- AnyCharts wordcloud -->
+    <script src="https://cdn.anychart.com/releases/8.11.0/js/anychart-tag-cloud.min.js"></script>
+    <!-- Anycharts style -->
+    <link href="https://cdn.anychart.com/releases/v8/css/anychart-ui.min.css" type="text/css" rel="stylesheet">
+    <link href="https://cdn.anychart.com/releases/v8/fonts/css/anychart-font.min.css" type="text/css" rel="stylesheet">
+
     <!-- SockietIO -->
     <script src="https://cdn.socket.io/4.4.1/socket.io.min.js" integrity="sha384-fKnu0iswBIqkjxrhQCTZ7qlLHOFEgNkRmK2vaO/LbTZSXdJfAu6ewRBdwHPhBo/H" crossorigin="anonymous"></script>
 
@@ -45,9 +53,9 @@
                 </div>
                 <div class = "col-10">
                     <span v-if="taTab">Search for a fund (select only 1 fund): </span> 
-                    <span v-if="poTab">Search for a fund (select between 2 to 4 funds): </span> 
-                    <span v-if="predictionTab">Search for a fund (select only one fund): </span> 
-                    <select v-on:change="setTickersDataPO()" v-model="stockSelected" data-width="90%" id="stock-selection" class="selectpicker mt-1 stockSearch" data-live-search="true" data-max-options="3" multiple></select>
+                    <span v-if="poTab">Search for a fund (select between 2 to 3 funds): </span> 
+                    <span v-if="predictionTab">Search for a fund (select between 2 to 3 funds): </span> 
+                    <select v-model="stockSelected" data-width="90%" id="stock-selection" class="selectpicker mt-1 stockSearch" data-live-search="true" data-max-options="3" multiple></select>
 
                 </div>
                 <!-- <div v-if="poTabSelected" class = "col-10">
@@ -125,7 +133,7 @@
                         <div id="graphs">
                             <div class="my-2">
                                 <span class="pr-3">Time Range: </span>
-                                <select v-on:change="setTickersDataPO()" v-model="timeRange" class="selectpicker" data-width="fit"> -->
+                                <select v-model="timeRange" class="selectpicker" data-width="fit"> -->
                                     <option value=12>1Y</option>
                                     <option value=60>5Y</option>
                                 </select>
@@ -133,7 +141,7 @@
                             </div>
                             <div class="my-2">
                                 <span class="pr-2">Select your preferred risk level: </span>
-                                <select  v-on:change="setTickersDataPO()" v-model="risk" class="selectpicker" data-width="fit">
+                                <select v-model="risk" class="selectpicker" data-width="fit">
                                     <option value="Low">Low</option>
                                     <option value="Medium">Medium</option>
                                     <option value="High">High</option>
@@ -159,6 +167,9 @@
                                     <button id="generate" v-on:click="updateCharts()" class="btn btn-warning">Update Charts</button>
                                 </span>
                             </div>
+                            <div v-if="alert" class="alert alert-warning text-center my-3" role="alert">
+                                <strong>{{ alertMsg }}</strong>
+                            </div>
                         </div>
                         <div id="descriptionPO" style = "margin-top: 50px;">
                             
@@ -172,7 +183,41 @@
 
                     <!-- div for prediction -->
                     <div id="prediction" class="tabcontent" style="display: none">
-
+                        <button class="btn my-3 generate-btn" @click="get_sentiment_wordcloud()">Generate Charts</button>
+                        <button class="btn my-3 generate-btn" @click="displayPredictionChart()">Generate Prediction</button>
+                        <div class="row">
+                            <div class="col-12">
+                                <div v-if="alert" class="alert alert-warning text-center" role="alert">
+                                    <strong>{{ alertMsg }}</strong>
+                                </div>
+                            </div>
+                            <div v-if="alert==false" class="col-12">
+                                <div class="alert alert-secondary text-center" role="alert">
+                                    <strong>Sentiment Polarity and WordCloud of Portfolio</strong>
+                                </div>
+                            </div>
+                            <!-- <p class="ml-2"><b>7 days Sentiment Analysis</b></p> -->
+                            <div class="col-6 pr-3 d-flex justify-content-center align-items-center pretty_container">
+                                <canvas id="sentimentChart"></canvas>
+                            </div>
+                            <!-- <p class="ml-2"><b>Portfolio Tweets Wordcloud</b></p> -->
+                            <div class="col-5 p-0 pretty_container">
+                                <div id="wordCloudChart" style="height:400px; width: auto;"></div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div v-if="alert==false" class="col-12 p-0">
+                                <div class="alert alert-secondary text-center mr-0" role="alert">
+                                    <strong>Returns Prediction</strong>
+                                </div>
+                            </div>
+                            <div class="col-12 pretty_container">
+                                <canvas id="predictionChartBackTest"></canvas>
+                            </div>
+                            <div class="col-12 pretty_container">
+                                <canvas id="predictionChart"></canvas>
+                            </div>
+                        </div>
                     </div>
                 </div>  
             </div>
@@ -217,12 +262,13 @@
 
     // const socket = io.connect('http://127.0.0.1:5100');
     // for updating selected stocks 
-
+    
     var app = new Vue({
             el: '#app',
             data: {
-                stockSelected: ["XLE - ETF", "VGT - TV", "XLV - AMZZ"],
-                // stockSelectedPO: ["PSL - Invesco DWA Consumer Staples Momentum ETF"],
+                // stockSelected: ["XLE - ETF", "VGT - TV", "XLV - AMZZ"],
+                stockSelected: ["PSL - Invesco DWA Consumer Staples Momentum ETF"],
+                // stockSelected: ["VGT - Vanguard Information Tech ETF", "XLE - SPDR Select Sector Fund - Energy Select Sector", "XLV - SPDR Select Sector Fund - Health Care"],
                 selectedTA: "price",
                 timeRange: 12,
                 risk: "Low",
@@ -236,7 +282,7 @@
                 //for all charts
                 funds: [],
                 //pie chart
-                combi: [],
+                combi: [1/3, 1/3, 1/3],
                 //scatter chart
                 ef_list: [],
                 best_ef_list: [],
@@ -247,6 +293,17 @@
                 rar_evaluation: "",
                 // correlation Chart
                 return_series: [],
+                // for prediction:
+                sentiment_chart: {},
+                word_cloud_chart: {},
+                prediction_chart: {},
+                polarity_dates: [],
+                polarity: [],
+                word_cloud_data: [],
+                prediction_result: {},
+                alert: false,
+                alertMsg: "",
+                socket: {}
 
             },
             computed: {
@@ -525,7 +582,7 @@
 
             },
 
-            setTickersDataPO: function(){
+            setTickersDataPO: function(generateBool, updateBool){
                 document.getElementById("descriptionPO").innerHTML = ""
                 const data = {
                     "data": this.stockSelected, 
@@ -534,7 +591,60 @@
                 };
 
                 set_ticker_data_po(URL_po, data).then(result =>{
-                        this.portfolioOptimisation();
+                    get_po(URL_po).then(result =>{
+                    const data = result;
+                    console.log(data)
+                    var funds = data.ticker;
+                    var allocation = data.allocation;
+                    var close_price = data.close_price;
+                    var combi = data.combi;
+                    var rar = data.rar;
+                    var dates = data.dates;
+                    var ef_list = data.ef_list;
+                    var best_ef_list = data.best_ef_list;
+                    var rar_evaluation = data.rar_evaluation
+                    var risk_level_point = data.risk_level_point;
+                    var return_series = data.return_series;
+                    var volatility = data.volatility;
+                    var returns = data.returns;
+
+                    // description
+                    this.volatility = volatility;
+                    this.returns = returns;                    
+                    
+                    //pie chart
+                    this.funds = funds;
+                    this.combi = combi;
+
+                    //scatter chart
+
+                    this.ef_list = ef_list;
+                    this.best_ef_list = best_ef_list;
+                    this.risk_level_point = risk_level_point;
+                    this.rar = Number(rar).toFixed(3);
+                    this.rar_evaluation = rar_evaluation;
+                    
+                    // correlation chart;
+                    this.return_series = return_series;
+                    this.dates = dates;
+
+                    if (generateBool){
+                        this.displayChart();
+                        this.displayChart2();
+                        this.displayChart3();
+                        document.getElementById("descriptionPO").innerHTML = "Based on your risk level selection, the pie chart below shows the optimised combination for the funds you selected. <br> The RAR of this combination is: " + this.rar + " and is in a " + this.rar_evaluation + " range. <br> The returns of this combination is: " + this.returns + "<br> The volatility of this combination is: " + this.volatility
+                    } else if (updateBool) {
+                        // console.log("yes");
+                        this.updateChart();
+                        this.updateChart2();
+                        this.updateChart3();
+                        document.getElementById("descriptionPO").innerHTML = "Based on your risk level selection, the pie chart below shows the optimised combination for the funds you selected. <br> The RAR of this combination is: " + this.rar + " and is in a " + this.rar_evaluation + " range. <br> The returns of this combination is: " + this.returns + "<br> The volatility of this combination is: " + this.volatility
+                    }
+
+                    this.alert = false;
+                    this.alertMsg = ""
+
+                })
                     
                 })
 
@@ -543,21 +653,31 @@
             generateCharts(){
                 const generate = true;
                 const update = false;
-                this.portfolioOptimisation(generate, update);
 
-                
+                this.alert = true;
+                this.alertMsg = "Conducting simulation..."
 
-                // this.displayChart();            
-                // this.displayChart2();          
-    
+                setTimeout(() => {
+                    this.alertMsg = "Generating Charts..."
+                }, 3000)
+
+                this.setTickersDataPO(generate, update);
+
             },
 
             updateCharts() {
                 const generate = false;
                 const update = true;
-                this.portfolioOptimisation(generate, update);
 
-                //document.getElementById("descriptionPO").innerHTML = "Based on your risk level selection, the pie chart below shows the optimised combination for the funds you selected. <br> The RAR of this combination is: " + this.rar + " and is in a " + this.rar_evaluation + " range. <br> The returns of this combination is: " + this.returns + "<br> The volatility of this combination is: " + this.volatility
+                this.alert = true;
+                this.alertMsg = "Conducting simulation..."
+
+                setTimeout(() => {
+                    this.alertMsg = "Updating Charts..."
+                }, 750)
+
+                this.setTickersDataPO(generate, update);
+
             },
 
 
@@ -600,7 +720,7 @@
                     this.dates = dates;
 
                     if (generateBool){
-                        document.getElementById("descriptionPO").innerHTML = "Based on your risk level selection, the pie chart below shows the optimised combination for the funds you selected. <br> The RAR of this combination is: " + this.rar + " and is in a " + this.rar_evaluation + " range. <br> The returns of this combination is: " + this.returns + "<br> The volatility of this combination is: " + this.volatility
+                        document.getElementById("descriptionPO").innerHTML = "Based on your risk level selection, the pie chart below shows the optimised combination for the funds you selected. <br> The RAR of this combination is: " + this.rar + "and is in a " + this.rar_evaluation + " range. <br> The returns of this combination is: " + this.returns + "<br> The volatility of this combination is: " + this.volatility
                         this.displayChart();
                         this.displayChart2();
                         this.displayChart3();
@@ -611,6 +731,10 @@
                         this.updateChart2();
                         this.updateChart3();
                     }
+
+                    this.alert = false;
+                    this.alertMsg = ""
+
                 })
                 
             },
@@ -640,6 +764,10 @@
                         type: "pie",
                         data: data,
                         options: {
+                            title: {
+                                display: true,
+                                text: "Portfolio Composition"
+                            },
                             plugins:{
                                 colorschemes:{
                                     scheme:  'brewer.YlGnBu'
@@ -738,21 +866,25 @@
                     type: "scatter",
                     data: data,
                     options: {
-                            scales:{
-                                yAxes: [{
-                                    scaleLabel: {
-                                        display: true,
-                                        labelString: "Return"
-                                    }
-                                }],
-                                xAxes: [{
-                                    scaleLabel: {
-                                        display: true,
-                                        labelString: "Volatility"
-                                    }
-                                }]
-                            }   
-                        
+                        title: {
+                                display: true,
+                                text: "Efficient Frontier"
+                            },
+                        scales:{
+                            yAxes: [{
+                                scaleLabel: {
+                                    display: true,
+                                    labelString: "Return"
+                                }
+                            }],
+                            xAxes: [{
+                                scaleLabel: {
+                                    display: true,
+                                    labelString: "Volatility"
+                                }
+                            }]
+                        }   
+                    
                     },
             
                 })
@@ -795,6 +927,10 @@
                         type: "line",
                         data: data,
                         options: {
+                            title: {
+                                display: true,
+                                text: "Returns Series"
+                            },
                             scales:{
                                 yAxes: [{
                                     scaleLabel: {
@@ -851,6 +987,183 @@
                 this.corrChart.data = data;
                 this.corrChart.update();
 
+            },
+
+            // setTickersDataPred(){
+            //     console.log("")
+            // },
+
+            get_sentiment_wordcloud(){
+                this.alert = true;
+                this.alertMsg = "Getting Sentiment and Word Cloud..."
+
+                setTimeout(() => {
+                    this.alertMsg = " Generating Charts..."
+                }, 2500)
+
+
+                this.socket.emit('sentiment-wordcloud', {"stocks": this.stockSelected, "combi": this.combi}, (data) => {
+                    this.polarity_dates = data.dates;
+                    this.polarity = data.polarity;
+                    this.word_cloud_data = data.word_cloud_data;
+
+                    if (this.polarity_dates.length > 0) {
+                        this.alert = false;
+                        this.alertMsg = "";
+                    }
+
+                    // this.pretty_container_bool = true;
+                    this.displaySentimentChart();
+                    this.displayWordCloud();
+                });
+            },
+
+            get_prediction() {
+                this.socket.emit('get-prediction', {"stocks": this.stockSelected, "combi": this.combi}, (data) => {
+                    console.log(data);
+                    this.prediction_result = data['data'];
+                    console.log(typeof this.prediction_result.train.dates)
+                    console.log(typeof this.prediction_result.train.data_points)
+                    // this.polarity_dates = data.dates;
+                    // this.polarity = data.polarity;
+                    // this.word_cloud_data = data.word_cloud_data;
+
+                    // if (this.polarity_dates.length > 0) {
+                    //     this.alert = false;
+                    //     this.alertMsg = "";
+                    // }
+
+                    // // this.pretty_container_bool = true;
+                    // this.displaySentimentChart();
+                    // this.displayWordCloud();
+                });
+            },
+
+            displayPredictionChart: function(){
+                // this.get_prediction();
+                var train_dates = this.prediction_result.train.dates
+                var train_data = this.prediction_result.train.data_points
+                var padding = new Array(train_data.length - 1).fill(null);
+                padding.push(train_data[train_data.length -1])
+
+                var test_dates = this.prediction_result.test.dates
+                var test_data = padding.concat(this.prediction_result.test.data_points)
+
+                var predicted_dates = this.prediction_result.predicted.dates
+                var predicted_data = padding.concat(this.prediction_result.predicted.data_points)
+
+                var total_dates = train_dates.concat(test_dates);
+
+                const data = {
+                    labels: total_dates,
+                    datasets: [{
+                                label: "Train Returns",
+                                data: train_data,
+                                borderColor: 'rgb(255,0,0)',
+                                borderWidth: 1.5,
+                                pointRadius: 0.5,
+                                fill: false
+                            },
+                            {
+                                label: 'Predicted Returns',
+                                data: predicted_data,
+                                borderColor: 'rgb(0,0,255)',
+                                borderWidth: 1.0,
+                                pointRadius: 0.5,
+                                fill: false
+                            },
+                            {
+                                label: 'Test Returns',
+                                data: test_data,
+                                borderColor: 'rgb(0,255,0)',
+                                borderWidth: 1.5,
+                                pointRadius: 0.5,
+                                fill: false
+                            },
+
+                    ]
+                }
+
+                const ctx = document.getElementById('predictionChartBackTest');
+                this.prediction_chart = new Chart(ctx, {
+                    type: "line",
+                    data: data,
+                    options: {
+                        title: {
+                            display: true,
+                            text: 'Returns Prediction Chart'
+                        },
+                        scales:{
+                            yAxes: [{
+                                scaleLabel: {
+                                    display: true,
+                                    labelString: 'Returns'
+                                }
+                            }],
+                            xAxes: [{
+                                scaleLabel: {
+                                    display:true,
+                                    labelString: 'Date'
+                                }
+                            }]
+                        }
+                    }
+                });
+
+
+            },
+
+            displaySentimentChart(){
+                const data = {
+                    labels: this.polarity_dates,
+                    datasets: [
+                        {
+                            label: "Portfolio Sentiment Polarity",
+                            data: this.polarity,
+                            borderColor: "rgb(255, 99, 132)",
+                            backgroundColor: "rgb(255, 99, 132, -1)"
+                        }
+                    ]
+                }
+                var chartId = document.getElementById('sentimentChart').getContext("2d");
+                this.sentiment_chart = new Chart(chartId, {
+                    type: "line",
+                    // labels: dates,
+                    data: data,
+                    pointRadius: 0,
+                    pointHoverRadius: 0,
+                    options: {
+                        title: {
+                            display: true,
+                            text: 'Sentiment Polarity Chart'
+                        },
+                        elements: {
+                            line: {
+                                // tension: 0,
+                                borderWidth: 1.5,
+                            }
+                        },
+                        // responsive: true,
+                        scales: {
+                            x: {
+                                type: 'timeseries',
+                            }
+                        }
+                    }
+                });
+
+            },
+
+            displayWordCloud(){
+                // create a chart and set the data
+                var colors = anychart.scales
+                    .ordinalColor()
+                    .colors(['#26959f', '#f18126', '#3b8ad8', '#60727b', '#e24b26']);
+                const chart = anychart.tagCloud(this.word_cloud_data).title("Word Cloud of Portfolio's Tweets").colorScale(colors).angles([-90, 0, 90]);
+                chart.colorRange().enabled(true);
+                var state = chart.normal();
+                chart.container("wordCloudChart");
+                chart.draw();
             },
             
             // for switching of tabs
@@ -913,29 +1226,41 @@
                 evt.currentTarget.className += " active";
             },
 
-            // prediction: function(feature,evt){
-            //     let taTab = document.getElementById("ta-tab");
-            //     taTab.className = "nav-link";
+            prediction: function(feature,evt){
 
-            //     let poTab = document.getElementById("po-tab");
-            //     poTab.className = "nav-link";
+                console.log("activate")
 
-            //     let predictionTab = document.getElementById("prediction-tab");
-            //     predictionTab.className = "nav-link active";
+                this.taTab = false;
+                this.poTab = false;
+                this.predictionTab = true;
 
-            //     var i, tabcontent, tablinks;
-            //     tabcontent = document.getElementsByClassName("tabcontent");
-            //     for (i = 0; i < tabcontent.length; i++) {
-            //         tabcontent[i].style.display = "none";
-            //     }
-            //     tablinks = document.getElementsByClassName("tablinks");
-            //     for (i = 0; i < tablinks.length; i++) {
-            //         tablinks[i].className = tablinks[i].className.replace("active", "");
-            //     }
-            //     document.getElementById(feature).style.display = "block";
-            //     evt.currentTarget.className += " active";
-            // }
+                let taTab = document.getElementById("ta-tab");
+                taTab.className = "nav-link";
+
+                let poTab = document.getElementById("po-tab");
+                poTab.className = "nav-link";
+
+                let predictionTab = document.getElementById("prediction-tab");
+                predictionTab.className = "nav-link active";
+
+                var i, tabcontent, tablinks;
+                tabcontent = document.getElementsByClassName("tabcontent");
+                for (i = 0; i < tabcontent.length; i++) {
+                    tabcontent[i].style.display = "none";
+                }
+                tablinks = document.getElementsByClassName("tablinks");
+                for (i = 0; i < tablinks.length; i++) {
+                    tablinks[i].className = tablinks[i].className.replace("active", "");
+                }
+                document.getElementById(feature).style.display = "block";
+                evt.currentTarget.className += " active";
+            },
+
         },
+        mounted() {
+            this.socket = io.connect('http://127.0.0.1:5300');
+            this.get_prediction();
+        }
     })
 
 </script>
